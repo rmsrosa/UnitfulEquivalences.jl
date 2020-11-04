@@ -71,14 +71,17 @@ Unitful.Dimensions{(Unitful.Dimension{:Length}(1//1),)}
 ```
 """
 dimtype(::Type{Union{Quantity{T,D,U}, Level{L,S,Quantity{T,D,U}} where {L,S}} where {T,U}}) where D = typeof(D)
+dimtype(::Unitful.Dimensions{()}) = typeof(Unitful.NoDims)
 
 """
     @eqrelation Name a/b = c
     @eqrelation Name a*b = c
+    @eqrelation Name a = f(b)
 
-Add a proportional or antiproportional relation between dimensions `a` and `b` to an
-existing equivalence `Name`. The dimensions `a` and `b` must be specified as quantity type
-aliases like `Unitful.Energy`.
+Add a proportional or antiproportional relation between dimensions `a` and `b` or a 
+functional relation from `b` to `a` to an existing equivalence `Name`. The dimensions
+`a` and `b` must be specified as quantity type aliases like `Unitful.Energy` or
+`Unitful.NoDims`.
 
 # Example
 
@@ -94,28 +97,38 @@ via `uconvert(energyunit, wavelength, Spectral())` and
 macro eqrelation(name, relation)
     relation isa Expr && relation.head == :(=) || _eqrelation_error()
     lhs, rhs = relation.args
-    lhs isa Expr && lhs.head == :call && length(lhs.args) == 3 || _eqrelation_error()
-    op, a, b = lhs.args
-    if op == :/
-        quote
-            UnitfulEquivalences.edconvert(::dimtype($(esc(a))), x::$(esc(b)), ::$(esc(name))) = x * $(esc(rhs))
-            UnitfulEquivalences.edconvert(::dimtype($(esc(b))), x::$(esc(a)), ::$(esc(name))) = x / $(esc(rhs))
-            nothing
+    if lhs isa Expr && lhs.head == :call && length(lhs.args) == 3
+        op, a, b = lhs.args
+        if op == :/
+            quote
+                UnitfulEquivalences.edconvert(::dimtype($(esc(a))), x::$(esc(b)), ::$(esc(name))) = x * $(esc(rhs))
+                UnitfulEquivalences.edconvert(::dimtype($(esc(b))), x::$(esc(a)), ::$(esc(name))) = x / $(esc(rhs))
+                nothing
+            end
+        elseif op == :*
+            quote
+                UnitfulEquivalences.edconvert(::dimtype($(esc(a))), x::$(esc(b)), ::$(esc(name))) = $(esc(rhs)) / x
+                UnitfulEquivalences.edconvert(::dimtype($(esc(b))), x::$(esc(a)), ::$(esc(name))) = $(esc(rhs)) / x
+                nothing
+            end
+        else
+            _eqrelation_error()
         end
-    elseif op == :*
+    elseif rhs isa Expr && rhs.head == :call && length(rhs.args) == 2
+        a = lhs
+        f, b = rhs.args
         quote
-            UnitfulEquivalences.edconvert(::dimtype($(esc(a))), x::$(esc(b)), ::$(esc(name))) = $(esc(rhs)) / x
-            UnitfulEquivalences.edconvert(::dimtype($(esc(b))), x::$(esc(a)), ::$(esc(name))) = $(esc(rhs)) / x
+            UnitfulEquivalences.edconvert(::dimtype($(esc(a))), x::$(esc(b)), ::$(esc(name))) = $(esc(f))(x)
             nothing
         end
     else
         _eqrelation_error()
-    end
+    end        
 end
 
-_eqrelation_error() = error("second macro argument must be an (anti-)proportionality relation " *
-                            "`a/b = c` or `a*b = c`, cf. the documentation for `@equivalence` " *
-                            "or `@eqrelation`.")
+_eqrelation_error() = error("second macro argument must be either an (anti-)proportionality " *
+                            "relation (`a*b = c`) `a/b = c` or a functional relation `a = f(b)`, " *
+                            "cf. the documentation for `@eqrelation`.")
 
 using Unitful: Energy, Frequency, Length, Mass, c0, h
 
