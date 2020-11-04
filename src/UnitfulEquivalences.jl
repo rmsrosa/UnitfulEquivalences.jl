@@ -81,7 +81,7 @@ dimtype(::Unitful.Dimensions{()}) = typeof(Unitful.NoDims)
 Add a proportional or antiproportional relation between dimensions `a` and `b` or a 
 functional relation from `b` to `a` to an existing equivalence `Name`. The dimensions
 `a` and `b` must be specified as quantity type aliases like `Unitful.Energy` or
-`Unitful.NoDims`.
+`Unitful.NoDims` and the function `f` must be compatible with the proper dimensions involved.
 
 # Example
 
