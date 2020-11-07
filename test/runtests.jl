@@ -7,7 +7,6 @@ using Test
     # Concentration of solids in solution
     #
     # It is a proportional relation but we do it here this way just to check the code
-    #
     # need to use derived dimensions Unitful.Density since g(Unitful.Mass / Unitful.Volume) 
     # is not allowed/understood
     g(x) = (1.0u"L"/u"kg") * x
@@ -17,12 +16,18 @@ using Test
     @test uconvert(u"ml", 1u"kg", Solutions()) === 1000.0u"ml"
     @test uconvert(Unitful.NoUnits, 1u"mg/L", Solutions()) == 1.0e-6
 
-    # Squared area, just a nonlinear relation for testing
+    # Ball Volume, just a nonlinear relation for testing
     h(x) = 4π * x^3 / 3
     @equivalence Ball
     @eqrelation Ball Unitful.Volume = h(Unitful.Length)
     @test uconvert(u"m^3", 1u"m", Ball()) ≈ (4π/3) * u"m^3"
     
+    # Area
+    u(x) = π * x^2
+    @equivalence Square
+    UnitfulEquivalences.edconvert(::Unitful.Area, x::Unitful.Length, ::Square) = u(x)
+    uconvert(u"m^2", 2u"m", Square())
+
     # MassEnergy
     @test uconvert(u"keV", 1u"me", MassEnergy()) ≈ 510.999u"keV" (atol = 0.001u"keV")
     @test uconvert(u"kg", 1000u"keV", MassEnergy()) ≈ 1.957u"me" (atol = 0001u"me")
