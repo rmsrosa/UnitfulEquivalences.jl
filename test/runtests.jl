@@ -10,11 +10,18 @@ using Test
     # need to use derived dimensions Unitful.Density since g(Unitful.Mass / Unitful.Volume) 
     # is not allowed/understood
     g(x) = (1.0u"L"/u"kg") * x
+    ginv(x) = (1.0u"kg"/u"L") * x
     @equivalence Solutions
     @eqrelation Solutions Unitful.Volume = g(Unitful.Mass)
+    #@eqrelation Solutions Unitful.Volume / Unitful.Mass = 1.0u"L/kg"
     @eqrelation Solutions Unitful.NoDims = g(Unitful.Density)
+#    @eqrelation Solutions Unitful.Density = g(Unitful.NoDims)
+#    @eqrelation Solutions Unitful.NoDims / Unitful.Density = 1.0u"L/kg"
+
     @test uconvert(u"ml", 1u"kg", Solutions()) === 1000.0u"ml"
     @test uconvert(Unitful.NoUnits, 1u"mg/L", Solutions()) == 1.0e-6
+    #uconvert(u"mg/L", 1 * Unitful.Unit, Solutions())
+
 
     # Ball Volume, just a nonlinear relation for testing
     h(x) = 4π * x^3 / 3
@@ -23,10 +30,10 @@ using Test
     @test uconvert(u"m^3", 1u"m", Ball()) ≈ (4π/3) * u"m^3"
     
     # Area
-    u(x) = π * x^2
-    @equivalence Square
-    UnitfulEquivalences.edconvert(::Unitful.Area, x::Unitful.Length, ::Square) = u(x)
-    uconvert(u"m^2", 2u"m", Square())
+#    u(x) = π * x^2
+#    @equivalence Square
+#    UnitfulEquivalences.edconvert(::Unitful.Area, x::Unitful.Length, ::Square) = u(x)
+#    uconvert(u"m^2", 2u"m", Square())
 
     # MassEnergy
     @test uconvert(u"keV", 1u"me", MassEnergy()) ≈ 510.999u"keV" (atol = 0.001u"keV")
